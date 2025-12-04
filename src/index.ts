@@ -77,7 +77,7 @@ async function handleUpload(
   const filenameRegex = /^[a-zA-Z0-9._-]+$/;
   if (!filenameRegex.test(filename)) {
     return new Response(
-      JSON.stringify({ error: "Invalid filename. Only alphanumeric characters, dots, underscores, and hyphens are allowed." }),
+      JSON.stringify({ error: "Invalid filename format" }),
       {
         status: 400,
         headers: { "Content-Type": "application/json" },
