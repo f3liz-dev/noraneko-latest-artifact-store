@@ -1,0 +1,33 @@
+{
+  "name": "noraneko-latest-artifact-store",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker for storing latest noraneko browser build artifacts with GitHub OIDC authentication",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "cloudflare-worker",
+    "artifact-store",
+    "github-oidc",
+    "noraneko"
+  ],
+  "license": "MPL-2.0",
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.30",
+    "@cloudflare/workers-types": "^4.20250528.0",
+    "@types/node": "^22.15.29",
+    "eslint": "^9.28.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.2",
+    "wrangler": "^4.16.1"
+  },
+  "dependencies": {
+    "jose": "^6.0.11"
+  }
+}

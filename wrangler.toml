@@ -1,0 +1,14 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+name = "noraneko-latest-artifact-store"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[[r2_buckets]]
+binding = "ARTIFACTS_BUCKET"
+bucket_name = "noraneko-artifacts"
+
+[vars]
+ALLOWED_REPOSITORY = "f3liz-dev/noraneko-runtime"

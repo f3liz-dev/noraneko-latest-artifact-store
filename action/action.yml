@@ -1,0 +1,83 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+name: "Upload Noraneko Artifacts"
+description: "Upload build artifacts to noraneko artifact store with GitHub OIDC authentication"
+author: "f3liz-dev"
+
+inputs:
+  path:
+    description: "Path to file or folder to upload"
+    required: true
+  worker-url:
+    description: "URL of the Cloudflare Worker"
+    required: true
+  prefix:
+    description: "Optional prefix for uploaded file names"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get OIDC token
+      id: token
+      shell: bash
+      run: |
+        RESPONSE=$(curl -s -w "\n%{http_code}" -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+          "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=noraneko-artifact-store")
+        HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+        TOKEN=$(echo "$RESPONSE" | head -n-1 | jq -r '.value')
+        if [[ "$HTTP_CODE" != "200" ]] || [[ -z "$TOKEN" ]] || [[ "$TOKEN" == "null" ]]; then
+          echo "Failed to get OIDC token (HTTP $HTTP_CODE)"
+          exit 1
+        fi
+        echo "::add-mask::$TOKEN"
+        echo "value=$TOKEN" >> $GITHUB_OUTPUT
+
+    - name: Upload artifacts
+      shell: bash
+      env:
+        TOKEN: ${{ steps.token.outputs.value }}
+        WORKER_URL: ${{ inputs.worker-url }}
+        UPLOAD_PATH: ${{ inputs.path }}
+        PREFIX: ${{ inputs.prefix }}
+      run: |
+        upload_file() {
+          local file="$1"
+          local name="$2"
+          
+          [[ -n "$PREFIX" ]] && name="${PREFIX}${name}"
+          
+          # URL encode the filename
+          local encoded_name
+          encoded_name=$(printf '%s' "$name" | jq -sRr @uri)
+          
+          local status
+          status=$(curl -sf -o /dev/null -w "%{http_code}" -X PUT \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary "@$file" \
+            "$WORKER_URL/upload?filename=$encoded_name")
+          
+          if [[ "$status" != "200" ]]; then
+            echo "Failed to upload $name (HTTP $status)"
+            return 1
+          fi
+          echo "Uploaded: $name"
+        }
+        
+        if [[ -f "$UPLOAD_PATH" ]]; then
+          upload_file "$UPLOAD_PATH" "$(basename "$UPLOAD_PATH")"
+        elif [[ -d "$UPLOAD_PATH" ]]; then
+          find "$UPLOAD_PATH" -type f | while read -r file; do
+            # Preserve directory structure with double underscore separator
+            rel_path="${file#$UPLOAD_PATH/}"
+            name="${rel_path//\//__}"
+            upload_file "$file" "$name" || exit 1
+          done
+        else
+          echo "Path not found: $UPLOAD_PATH"
+          exit 1
+        fi
